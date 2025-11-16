@@ -19,6 +19,7 @@ import {
 import sellerShippingProfile from '../../links/seller-shipping-profile'
 import ConfigurationModuleService from '../../modules/configuration/service'
 import { SELLER_MODULE } from '../../modules/seller'
+import { ConfigurationRuleDefaults } from '../../shared/utils/configuration'
 import { createCommissionRuleWorkflow } from '../../workflows/commission/workflows'
 import { createConfigurationRuleWorkflow } from '../../workflows/configuration/workflows'
 import { createLocationFulfillmentSetAndAssociateWithSellerWorkflow } from '../../workflows/fulfillment-set/workflows'

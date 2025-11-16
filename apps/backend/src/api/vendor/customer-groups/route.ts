@@ -1,10 +1,13 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
-import sellerCustomerGroup from '../../../links/seller-customer-group'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
-import { createSellerCustomerGroupWorkflow } from '../../../workflows/customer-groups/workflows'
-import { VendorCreateCustomerGroupType } from './validators'
+import sellerCustomerGroup from "../../../links/seller-customer-group";
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
+import { createSellerCustomerGroupWorkflow } from "../../../workflows/customer-groups/workflows";
+import { VendorCreateCustomerGroupType } from "./validators";
 
 /**
  * @oas [get] /vendor/customer-groups
@@ -50,7 +53,7 @@ import { VendorCreateCustomerGroupType } from './validators'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Seller
+ *   - Vendor Customer Groups
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -59,22 +62,27 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const { data: customer_groups, metadata } = await query.graph({
     entity: sellerCustomerGroup.entryPoint,
     fields: req.queryConfig.fields.map((field) => `customer_group.${field}`),
     pagination: req.queryConfig.pagination,
-    filters: req.filterableFields
-  })
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null,
+      },
+    },
+  });
 
   res.json({
     customer_groups,
     count: metadata?.count,
     offset: metadata?.skip,
-    limit: metadata?.take
-  })
-}
+    limit: metadata?.take,
+  });
+};
 
 /**
  * @oas [post] /vendor/customer-groups
@@ -98,7 +106,7 @@ export const GET = async (
  *             customer_group:
  *               $ref: "#/components/schemas/VendorCustomerGroup"
  * tags:
- *   - Seller
+ *   - Vendor Customer Groups
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -110,7 +118,7 @@ export const POST = async (
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   const { result: customer_group } =
     await createSellerCustomerGroupWorkflow.run({
@@ -118,11 +126,11 @@ export const POST = async (
       input: {
         ...req.validatedBody,
         created_by: req.auth_context.actor_id,
-        seller_id: seller.id
-      }
-    })
+        seller_id: seller.id,
+      },
+    });
 
   res.status(201).json({
-    customer_group
-  })
-}
+    customer_group,
+  });
+};

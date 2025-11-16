@@ -50,7 +50,7 @@ import sellerReturn from '../../../links/seller-return'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Return
+ *   - Vendor Returns
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -64,7 +64,12 @@ export const GET = async (
   const { data: returns, metadata } = await query.graph({
     entity: sellerReturn.entryPoint,
     fields: req.queryConfig.fields.map((field) => `return.${field}`),
-    filters: req.filterableFields,
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null
+      }
+    },
     pagination: req.queryConfig.pagination
   })
 

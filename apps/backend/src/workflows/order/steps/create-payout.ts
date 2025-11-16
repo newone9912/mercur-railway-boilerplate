@@ -1,26 +1,26 @@
-import { StepResponse, createStep } from '@medusajs/framework/workflows-sdk'
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk";
 
-import { PAYOUT_MODULE } from '../../../modules/payout'
-import PayoutModuleService from '../../../modules/payout/service'
-import { CreatePayoutDTO, PayoutDTO } from '../../../modules/payout/types'
+import { CreatePayoutDTO, PayoutDTO } from "@mercurjs/framework";
+import { PAYOUT_MODULE } from "../../../modules/payout";
+import { PayoutModuleService } from "../../../modules/payout";
 
 export const createPayoutStep = createStep(
-  'create-payout',
+  "create-payout",
   async (input: CreatePayoutDTO, { container }) => {
-    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE)
+    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE);
 
-    let payout: PayoutDTO | null = null
-    let err = false
+    let payout: PayoutDTO | null = null;
+    let err = false;
 
     try {
-      payout = await service.createPayout(input)
+      payout = await service.createPayout(input);
     } catch {
-      err = true
+      err = true;
     }
 
     return new StepResponse({
       payout,
-      err
-    })
+      err,
+    });
   }
-)
+);

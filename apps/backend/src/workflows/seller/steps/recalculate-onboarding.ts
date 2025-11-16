@@ -1,29 +1,29 @@
-import { z } from 'zod'
+import { z } from "zod";
 
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
-import { StepResponse, createStep } from '@medusajs/framework/workflows-sdk'
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk";
 
-import sellerPayoutAccount from '../../../links/seller-payout-account'
-import sellerProduct from '../../../links/seller-product'
-import sellerStockLocation from '../../../links/seller-stock-location'
-import { SELLER_MODULE } from '../../../modules/seller'
-import SellerModuleService from '../../../modules/seller/service'
+import { SELLER_MODULE, SellerModuleService } from "../../../modules/seller";
+
+import sellerPayoutAccount from "../../../links/seller-payout-account";
+import sellerProduct from "../../../links/seller-product";
+import sellerStockLocation from "../../../links/seller-stock-location";
 
 export const recalculateOnboardingStep = createStep(
-  'recalculate-onboarding',
+  "recalculate-onboarding",
   async (seller_id: string, { container }) => {
-    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+    const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
     /* Store information */
     const {
-      data: [store]
+      data: [store],
     } = await query.graph({
-      entity: 'seller',
-      fields: ['*'],
+      entity: "seller",
+      fields: ["*"],
       filters: {
-        id: seller_id
-      }
-    })
+        id: seller_id,
+      },
+    });
 
     const { success: store_information } = z
       .object({
@@ -35,67 +35,67 @@ export const recalculateOnboardingStep = createStep(
         city: z.string().min(1),
         postal_code: z.string().min(1),
         country_code: z.string().min(1),
-        tax_id: z.string().nullish()
+        tax_id: z.string().nullish(),
       })
-      .safeParse(store)
+      .safeParse(store);
 
     /* Products added */
     const { data: sellerProducts } = await query.graph({
       entity: sellerProduct.entryPoint,
-      fields: ['id'],
+      fields: ["id"],
       filters: {
-        seller_id
-      }
-    })
+        seller_id,
+      },
+    });
 
-    const products = !!sellerProducts.length
+    const products = !!sellerProducts.length;
 
     /* Shipping locations */
     const { data: sellerLocations } = await query.graph({
       entity: sellerStockLocation.entryPoint,
-      fields: ['id'],
-      filters: { seller_id }
-    })
-    const locations_shipping = !!sellerLocations.length
+      fields: ["id"],
+      filters: { seller_id },
+    });
+    const locations_shipping = !!sellerLocations.length;
 
     /* Stripe connection */
     const {
-      data: [sellerPayoutAccountRelations]
+      data: [sellerPayoutAccountRelations],
     } = await query.graph({
       entity: sellerPayoutAccount.entryPoint,
-      fields: ['id'],
-      filters: { seller_id }
-    })
+      fields: ["id"],
+      filters: { seller_id },
+    });
 
-    const stripe_connection = !!sellerPayoutAccountRelations
+    const stripe_connection = !!sellerPayoutAccountRelations;
 
     /* Update onboarding */
     const {
-      data: [onboarding]
+      data: [onboarding],
     } = await query.graph({
-      entity: 'seller_onboarding',
-      fields: ['id'],
+      entity: "seller_onboarding",
+      fields: ["id"],
       filters: {
-        seller_id
-      }
-    })
+        seller_id,
+      },
+    });
 
     const toUpdate = {
       seller_id,
       stripe_connection,
       products,
       store_information,
-      locations_shipping
-    }
+      locations_shipping,
+    };
 
-    const sellerService = container.resolve<SellerModuleService>(SELLER_MODULE)
+    const sellerService = container.resolve<SellerModuleService>(SELLER_MODULE);
     const updatedOnboarding = onboarding
       ? await sellerService.updateSellerOnboardings({
           ...toUpdate,
-          id: onboarding.id
+          id: onboarding.id,
         })
-      : await sellerService.createSellerOnboardings(toUpdate)
+      : await sellerService.createSellerOnboardings(toUpdate);
 
-    return new StepResponse(updatedOnboarding)
+    return new StepResponse(updatedOnboarding);
   }
-)
+);

@@ -8,25 +8,21 @@ For example, create the file `src/jobs/hello-world.ts` with the following conten
 
 ```ts
 import {
-  IProductModuleService,
   MedusaContainer
-} from '@medusajs/framework/types'
-import { Modules } from '@medusajs/framework/utils'
+} from "@medusajs/framework/types";
 
 export default async function myCustomJob(container: MedusaContainer) {
-  const productService: IProductModuleService = container.resolve(
-    Modules.PRODUCT
-  )
+  const productService = container.resolve("product")
 
-  const products = await productService.listAndCountProducts()
+  const products = await productService.listAndCountProducts();
 
   // Do something with the products
 }
 
 export const config = {
-  name: 'daily-product-report',
-  schedule: '0 0 * * *' // Every day at midnight
-}
+  name: "daily-product-report",
+  schedule: "0 0 * * *", // Every day at midnight
+};
 ```
 
 A scheduled job file must export:

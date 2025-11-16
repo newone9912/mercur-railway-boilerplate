@@ -1,27 +1,20 @@
-import { MedusaService } from '@medusajs/framework/utils'
+import { MedusaService } from "@medusajs/framework/utils";
 
-import { ConfigurationRule } from './models'
-import { ConfigurationRuleType } from './types'
-
-export const ConfigurationRuleDefaults = new Map<
+import { ConfigurationRule } from "./models";
+import {
+  ConfigurationRuleDefaults,
   ConfigurationRuleType,
-  boolean
->([
-  [ConfigurationRuleType.GLOBAL_PRODUCT_CATALOG, false],
-  [ConfigurationRuleType.PRODUCT_REQUEST_ENABLED, true],
-  [ConfigurationRuleType.REQUIRE_PRODUCT_APPROVAL, false],
-  [ConfigurationRuleType.PRODUCT_IMPORT_ENABLED, true]
-])
+} from "@mercurjs/framework";
 
 class ConfigurationModuleService extends MedusaService({
-  ConfigurationRule
+  ConfigurationRule,
 }) {
   async isRuleEnabled(type: ConfigurationRuleType): Promise<boolean> {
     const [rule] = await this.listConfigurationRules({
-      rule_type: type
-    })
-    return rule ? rule.is_enabled : ConfigurationRuleDefaults.get(type)!
+      rule_type: type,
+    });
+    return rule ? rule.is_enabled : ConfigurationRuleDefaults.get(type)!;
   }
 }
 
-export default ConfigurationModuleService
+export default ConfigurationModuleService;

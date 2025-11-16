@@ -1,9 +1,15 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
-import { updateMemberWorkflow } from '../../../../workflows/member/workflows'
-import { deleteMemberWorkflow } from '../../../../workflows/member/workflows/delete-member'
-import { VendorUpdateMemberType } from '../validators'
+import {
+  deleteMemberWorkflow,
+  updateMemberWorkflow,
+} from "../../../../workflows/seller/workflows";
+
+import { VendorUpdateMemberType } from "../validators";
 
 /**
  * @oas [post] /vendor/members/{id}
@@ -34,7 +40,7 @@ import { VendorUpdateMemberType } from '../validators'
  *             member:
  *               $ref: "#/components/schemas/VendorMember"
  * tags:
- *   - Member
+ *   - Vendor Members
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -43,29 +49,29 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorUpdateMemberType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const { id } = req.params
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const { id } = req.params;
 
   await updateMemberWorkflow(req.scope).run({
     input: {
       id,
-      ...req.validatedBody
-    }
-  })
+      ...req.validatedBody,
+    },
+  });
 
   const {
-    data: [member]
+    data: [member],
   } = await query.graph(
     {
-      entity: 'member',
+      entity: "member",
       fields: req.queryConfig.fields,
-      filters: { id: id }
+      filters: { id: id },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.json({ member })
-}
+  res.json({ member });
+};
 
 /**
  * @oas [get] /vendor/members/{id}
@@ -91,7 +97,7 @@ export const POST = async (
  *             member:
  *               $ref: "#/components/schemas/VendorMember"
  * tags:
- *   - Member
+ *   - Vendor Members
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -100,22 +106,22 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
-  const { id } = req.params
+  const { id } = req.params;
   const {
-    data: [member]
+    data: [member],
   } = await query.graph(
     {
-      entity: 'member',
+      entity: "member",
       fields: req.queryConfig.fields,
-      filters: { id: id }
+      filters: { id: id },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.json({ member })
-}
+  res.json({ member });
+};
 
 /**
  * @oas [delete] /vendor/members/{id}
@@ -148,7 +154,7 @@ export const GET = async (
  *               type: boolean
  *               description: Whether or not the items were deleted
  * tags:
- *   - Member
+ *   - Vendor Members
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -157,15 +163,15 @@ export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const { id } = req.params
+  const { id } = req.params;
 
   await deleteMemberWorkflow(req.scope).run({
-    input: id
-  })
+    input: id,
+  });
 
   res.json({
     id,
-    object: 'member',
-    deleted: true
-  })
-}
+    object: "member",
+    deleted: true,
+  });
+};

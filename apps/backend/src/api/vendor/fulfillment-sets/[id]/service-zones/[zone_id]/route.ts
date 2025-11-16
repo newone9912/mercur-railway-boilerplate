@@ -1,11 +1,15 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
-import { updateServiceZonesWorkflow } from '@medusajs/medusa/core-flows'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { updateServiceZonesWorkflow } from "@medusajs/medusa/core-flows";
 
-import { IntermediateEvents } from '../../../../../../modules/algolia/types'
-import { fetchSellerByAuthActorId } from '../../../../../../shared/infra/http/utils'
-import { deleteVendorServiceZonesWorkflow } from '../../../../../../workflows/fulfillment-set/workflows'
-import { VendorUpdateServiceZoneType } from '../../../validators'
+import { IntermediateEvents } from "@mercurjs/framework";
+
+import { fetchSellerByAuthActorId } from "../../../../../../shared/infra/http/utils";
+import { deleteVendorServiceZonesWorkflow } from "../../../../../../workflows/fulfillment-set";
+import { VendorUpdateServiceZoneType } from "../../../validators";
 
 /**
  * @oas [post] /vendor/fulfillment-sets/{id}/service-zones/{zone_id}
@@ -42,7 +46,7 @@ import { VendorUpdateServiceZoneType } from '../../../validators'
  *             fulfillment_set:
  *               $ref: "#/components/schemas/VendorFulfillmentSet"
  * tags:
- *   - Fulfillment Set
+ *   - Vendor Fulfillment Sets
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -51,39 +55,39 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorUpdateServiceZoneType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
 
   await updateServiceZonesWorkflow.run({
     container: req.scope,
     input: {
       selector: {
-        id: req.params.zone_id
+        id: req.params.zone_id,
       },
-      update: req.validatedBody
-    }
-  })
+      update: req.validatedBody,
+    },
+  });
 
   await eventBus.emit({
     name: IntermediateEvents.SERVICE_ZONE_CHANGED,
-    data: { id: req.params.zone_id }
-  })
+    data: { id: req.params.zone_id },
+  });
 
   const {
-    data: [fulfillmentSet]
+    data: [fulfillmentSet],
   } = await query.graph(
     {
-      entity: 'fulfillment_set',
+      entity: "fulfillment_set",
       fields: req.queryConfig.fields,
       filters: {
-        id: req.params.id
-      }
+        id: req.params.id,
+      },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.json({ fulfillment_set: fulfillmentSet })
-}
+  res.json({ fulfillment_set: fulfillmentSet });
+};
 
 /**
  * @oas [delete] /vendor/fulfillment-sets/{id}/service-zones/{zone_id}
@@ -124,7 +128,7 @@ export const POST = async (
  *               description: Whether or not the items were deleted.
  *               default: true
  * tags:
- *   - Service Zone
+ *   - Vendor Fulfillment Sets
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -133,19 +137,19 @@ export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const { zone_id } = req.params
+  const { zone_id } = req.params;
 
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
   await deleteVendorServiceZonesWorkflow.run({
     container: req.scope,
     input: {
       ids: [zone_id],
-      seller_id: seller.id
-    }
-  })
+      seller_id: seller.id,
+    },
+  });
 
-  res.json({ id: zone_id, object: 'service_zone', deleted: true })
-}
+  res.json({ id: zone_id, object: "service_zone", deleted: true });
+};

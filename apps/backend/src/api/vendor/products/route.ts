@@ -1,18 +1,18 @@
 import {
   AuthenticatedMedusaRequest,
   MedusaRequest,
-  MedusaResponse
-} from '@medusajs/framework'
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 
-import sellerProductLink from '../../../links/seller-product'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
-import { assignBrandToProductWorkflow } from '../../../workflows/brand/workflows'
-import { createProductRequestWorkflow } from '../../../workflows/requests/workflows'
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
 import {
   VendorCreateProductType,
-  VendorGetProductParamsType
-} from './validators'
+  VendorGetProductParamsType,
+} from "./validators";
+import { createProductsWorkflow } from "@medusajs/medusa/core-flows";
+import { ProductRequestUpdatedEvent } from "@mercurjs/framework";
+import { filterProductsBySeller } from "./utils";
 
 /**
  * @oas [get] /vendor/products
@@ -67,7 +67,7 @@ import {
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Product
+ *   - Vendor Products
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -76,22 +76,31 @@ export const GET = async (
   req: MedusaRequest<VendorGetProductParamsType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
-  const { data: sellerProducts, metadata } = await query.graph({
-    entity: sellerProductLink.entryPoint,
-    fields: req.queryConfig.fields.map((field) => `product.${field}`),
-    filters: req.filterableFields,
-    pagination: req.queryConfig.pagination
-  })
+  const { productIds, count } = await filterProductsBySeller(
+    req.scope,
+    req.filterableFields.seller_id as string,
+    req.queryConfig.pagination?.skip || 0,
+    req.queryConfig.pagination?.take || 10,
+    req.filterableFields.sales_channel_id as string
+  );
+
+  const { data: sellerProducts } = await query.graph({
+    entity: "product",
+    fields: req.queryConfig.fields,
+    filters: {
+      id: productIds,
+    },
+  });
 
   res.json({
-    products: sellerProducts.map((product) => product.product),
-    count: metadata!.count,
-    offset: metadata!.skip,
-    limit: metadata!.take
-  })
-}
+    products: sellerProducts,
+    count: count,
+    offset: req.queryConfig.pagination?.skip || 0,
+    limit: req.queryConfig.pagination?.take || 10,
+  });
+};
 
 /**
  * @oas [post] /vendor/products
@@ -115,7 +124,7 @@ export const GET = async (
  *             product:
  *               $ref: "#/components/schemas/VendorProduct"
  * tags:
- *   - Product
+ *   - Vendor Products
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -124,50 +133,59 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorCreateProductType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const seller = await fetchSellerByAuthActorId(
     req.auth_context?.actor_id,
     req.scope
-  )
+  );
 
-  const { brand_name, additional_data, ...validatedBody } = req.validatedBody
-
-  const { result } = await createProductRequestWorkflow.run({
-    container: req.scope,
-    input: {
-      seller_id: seller.id,
-      data: {
-        data: validatedBody,
-        type: 'product',
-        submitter_id: req.auth_context.actor_id
-      },
-      additional_data
-    }
-  })
-
-  const { product_id } = result[0].data
-
-  if (brand_name) {
-    await assignBrandToProductWorkflow.run({
-      container: req.scope,
-      input: {
-        brand_name,
-        product_id
-      }
-    })
-  }
+  const { additional_data, ...validatedBody } = req.validatedBody;
 
   const {
-    data: [product]
+    result: [createdProduct],
+  } = await createProductsWorkflow.run({
+    container: req.scope,
+    input: {
+      products: [
+        {
+          ...validatedBody,
+          status: validatedBody.status === "draft" ? "draft" : "proposed",
+        },
+      ],
+      additional_data: { ...additional_data, seller_id: seller.id },
+    },
+  });
+
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
+  await eventBus.emit({
+    name: ProductRequestUpdatedEvent.TO_CREATE,
+    data: {
+      seller_id: seller.id,
+      data: {
+        data: {
+          ...createdProduct,
+          product_id: createdProduct.id,
+        },
+        submitter_id: req.auth_context.actor_id,
+        type: "product",
+        status: createdProduct.status === "draft" ? "draft" : "pending",
+      },
+    },
+  });
+
+  const product_id = createdProduct.id;
+
+  const {
+    data: [product],
   } = await query.graph(
     {
-      entity: 'product',
+      entity: "product",
       fields: req.queryConfig.fields,
-      filters: { id: product_id }
+      filters: { id: product_id },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.status(201).json({ product })
-}
+  res.status(201).json({ product });
+};

@@ -1,8 +1,10 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { OrderDTO } from '@medusajs/framework/types'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { OrderDTO } from "@medusajs/framework/types";
 
-import { listOrderCommissionLinesWorkflow } from '../../../../workflows/commission/workflows'
-import { getVendorOrdersListWorkflow } from '../../../../workflows/order/workflows'
+import { getVendorOrdersListWorkflow } from "../../../../workflows/order/workflows";
 
 /**
  * @oas [get] /vendor/orders/{id}
@@ -28,7 +30,7 @@ import { getVendorOrdersListWorkflow } from '../../../../workflows/order/workflo
  *             order:
  *               $ref: "#/components/schemas/VendorOrderDetails"
  * tags:
- *   - Order
+ *   - Vendor Orders
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -37,27 +39,20 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const { id } = req.params
+  const { id } = req.params;
 
   const { result } = await getVendorOrdersListWorkflow(req.scope).run({
     input: {
       fields: req.queryConfig.fields,
       variables: {
         filters: {
-          id
-        }
-      }
-    }
-  })
+          id,
+        },
+      },
+    },
+  });
 
-  const [order] = result as OrderDTO[]
+  const [order] = result as OrderDTO[];
 
-  const { result: commission } = await listOrderCommissionLinesWorkflow(
-    req.scope
-  ).run({
-    input: {
-      order_id: id
-    }
-  })
-  res.json({ order: { ...order, ...commission } })
-}
+  res.json({ order });
+};

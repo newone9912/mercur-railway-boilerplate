@@ -1,27 +1,24 @@
-import { StepResponse, createStep } from '@medusajs/framework/workflows-sdk'
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk";
 
-import { PAYOUT_MODULE } from '../../../modules/payout'
-import PayoutModuleService from '../../../modules/payout/service'
-import {
-  PayoutAccountDTO,
-  UpdatePayoutAccountDTO
-} from '../../../modules/payout/types'
+import { PayoutAccountDTO, UpdatePayoutAccountDTO } from "@mercurjs/framework";
+import { PAYOUT_MODULE } from "../../../modules/payout";
+import { PayoutModuleService } from "../../../modules/payout";
 
 export const updatePayoutAccountStep = createStep(
-  'update-payout-account',
+  "update-payout-account",
   async (input: UpdatePayoutAccountDTO, { container }) => {
-    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE)
+    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE);
 
-    const previousData = await service.retrievePayoutAccount(input.id)
+    const previousData = await service.retrievePayoutAccount(input.id);
 
     const updatedAccount: PayoutAccountDTO =
-      await service.updatePayoutAccounts(input)
+      await service.updatePayoutAccounts(input);
 
-    return new StepResponse(updatedAccount, previousData)
+    return new StepResponse(updatedAccount, previousData);
   },
   async (previousData: PayoutAccountDTO, { container }) => {
-    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE)
+    const service = container.resolve<PayoutModuleService>(PAYOUT_MODULE);
 
-    await service.updatePayoutAccounts(previousData)
+    await service.updatePayoutAccounts(previousData);
   }
-)
+);

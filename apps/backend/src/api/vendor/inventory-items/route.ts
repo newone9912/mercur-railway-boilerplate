@@ -14,7 +14,7 @@ import { VendorGetProductParamsType } from '../products/validators'
  *   "200":
  *     description: Ok
  * tags:
- *   - Product
+ *   - Vendor Inventory Items
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -28,7 +28,12 @@ export const GET = async (
   const { data: inventory_items, metadata } = await query.graph({
     entity: sellerInventoryItemLink.entryPoint,
     fields: req.queryConfig.fields.map((field) => `inventory_item.${field}`),
-    filters: req.filterableFields,
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null
+      }
+    },
     pagination: req.queryConfig.pagination
   })
 

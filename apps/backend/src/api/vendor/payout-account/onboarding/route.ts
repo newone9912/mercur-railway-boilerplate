@@ -27,7 +27,7 @@ import { VendorCreateOnboardingType } from '../validators'
  *             payout_account:
  *               $ref: "#/components/schemas/VendorPayoutAccount"
  * tags:
- *   - Payment Account
+ *   - Vendor Payout Account
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -57,7 +57,7 @@ export const POST = async (
       entity: 'payout_account',
       fields: req.queryConfig.fields,
       filters: {
-        onboarding_id: result.id
+        id: result.payout_account_id
       }
     },
     { throwIfKeyNotFound: true }

@@ -1,15 +1,19 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
-import { createShippingOptionsWorkflow } from '@medusajs/medusa/core-flows'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { createShippingOptionsWorkflow } from "@medusajs/medusa/core-flows";
 
-import sellerShippingOption from '../../../links/seller-shipping-option'
-import { IntermediateEvents } from '../../../modules/algolia/types'
-import { SELLER_MODULE } from '../../../modules/seller'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
+import { IntermediateEvents } from "@mercurjs/framework";
+import { SELLER_MODULE } from "../../../modules/seller";
+
+import sellerShippingOption from "../../../links/seller-shipping-option";
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
 import {
   VendorCreateShippingOptionType,
-  VendorGetShippingParamsType
-} from './validators'
+  VendorGetShippingParamsType,
+} from "./validators";
 
 /**
  * @oas [post] /vendor/shipping-options
@@ -33,7 +37,7 @@ import {
  *             shipping_option:
  *               $ref: "#/components/schemas/VendorShippingOption"
  * tags:
- *   - Shipping Option
+ *   - Vendor Shipping Options
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -42,52 +46,52 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorCreateShippingOptionType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const remoteLink = req.scope.resolve(ContainerRegistrationKeys.REMOTE_LINK)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const remoteLink = req.scope.resolve(ContainerRegistrationKeys.REMOTE_LINK);
 
   const seller = await fetchSellerByAuthActorId(
     req.auth_context?.actor_id,
     req.scope
-  )
+  );
 
   const { result } = await createShippingOptionsWorkflow(req.scope).run({
     input: [
       {
         ...req.validatedBody,
-        price_type: 'flat'
-      }
-    ]
-  })
+        price_type: "flat",
+      },
+    ],
+  });
 
   // TODO: Move this into createShippingOptionsWorkflow workflow hook
   await remoteLink.create({
     [SELLER_MODULE]: {
-      seller_id: seller.id
+      seller_id: seller.id,
     },
     [Modules.FULFILLMENT]: {
-      shipping_option_id: result[0].id
-    }
-  })
+      shipping_option_id: result[0].id,
+    },
+  });
 
-  const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
   await eventBus.emit({
     name: IntermediateEvents.SHIPPING_OPTION_CHANGED,
-    data: { id: result[0].id }
-  })
+    data: { id: result[0].id },
+  });
 
   const {
-    data: [shipping_option]
+    data: [shipping_option],
   } = await query.graph(
     {
-      entity: 'shipping_option',
+      entity: "shipping_option",
       fields: req.queryConfig.fields,
-      filters: { id: result[0].id }
+      filters: { id: result[0].id },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.status(201).json({ shipping_option })
-}
+  res.status(201).json({ shipping_option });
+};
 
 /**
  * @oas [get] /vendor/shipping-options
@@ -117,7 +121,7 @@ export const POST = async (
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Shipping Option
+ *   - Vendor Shipping Options
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -126,19 +130,24 @@ export const GET = async (
   req: AuthenticatedMedusaRequest<VendorGetShippingParamsType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const { data: sellerShippingOptions, metadata } = await query.graph({
     entity: sellerShippingOption.entryPoint,
     fields: req.queryConfig.fields.map((field) => `shipping_option.${field}`),
-    filters: req.filterableFields,
-    pagination: req.queryConfig.pagination
-  })
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null,
+      },
+    },
+    pagination: req.queryConfig.pagination,
+  });
 
   res.json({
     shipping_options: sellerShippingOptions.map((rel) => rel.shipping_option),
     count: metadata!.count,
     offset: metadata!.skip,
-    limit: metadata!.take
-  })
-}
+    limit: metadata!.take,
+  });
+};

@@ -1,7 +1,11 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
 
-import { selectSellerCustomers } from '../../../modules/seller/utils'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
+import { selectSellerCustomers } from "../../../modules/seller";
+
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
 
 /**
  * @oas [get] /vendor/customers
@@ -47,7 +51,7 @@ import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Seller
+ *   - Vendor Customers
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -59,22 +63,22 @@ export const GET = async (
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   const { customers, count } = await selectSellerCustomers(
     req.scope,
     seller.id,
     {
       skip: req.queryConfig.pagination.skip,
-      take: req.queryConfig.pagination.take || 50
+      take: req.queryConfig.pagination.take || 50,
     },
     req.queryConfig.fields
-  )
+  );
 
   res.json({
     customers,
     count: count,
     offset: req.queryConfig.pagination.skip,
-    limit: req.queryConfig.pagination.take
-  })
-}
+    limit: req.queryConfig.pagination.take,
+  });
+};

@@ -94,7 +94,7 @@ import { VendorGetOrderParamsType } from './validators'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Order
+ *   - Vendor Orders
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -114,7 +114,10 @@ export const GET = async (
     entity: sellerOrderLink.entryPoint,
     fields: ['order_id'],
     filters: {
-      seller_id: seller.id
+      seller_id: seller.id,
+      deleted_at: {
+        $eq: null
+      }
     }
   })
 

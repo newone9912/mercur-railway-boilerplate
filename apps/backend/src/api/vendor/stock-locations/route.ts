@@ -1,12 +1,16 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
-import { createStockLocationsWorkflow } from '@medusajs/medusa/core-flows'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { createStockLocationsWorkflow } from "@medusajs/medusa/core-flows";
 
-import sellerStockLocationLink from '../../../links/seller-stock-location'
-import { IntermediateEvents } from '../../../modules/algolia/types'
-import { SELLER_MODULE } from '../../../modules/seller'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
-import { VendorCreateStockLocationType } from './validators'
+import { IntermediateEvents } from "@mercurjs/framework";
+import { SELLER_MODULE } from "../../../modules/seller";
+
+import sellerStockLocationLink from "../../../links/seller-stock-location";
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
+import { VendorCreateStockLocationType } from "./validators";
 
 /**
  * @oas [post] /vendor/stock-locations
@@ -36,7 +40,7 @@ import { VendorCreateStockLocationType } from './validators'
  *             stock_location:
  *               $ref: "#/components/schemas/VendorStockLocation"
  * tags:
- *   - Stock Location
+ *   - Vendor Stock Locations
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -45,46 +49,46 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorCreateStockLocationType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const remoteLink = req.scope.resolve(ContainerRegistrationKeys.REMOTE_LINK)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const remoteLink = req.scope.resolve(ContainerRegistrationKeys.REMOTE_LINK);
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   const { result } = await createStockLocationsWorkflow(req.scope).run({
-    input: { locations: [req.validatedBody] }
-  })
+    input: { locations: [req.validatedBody] },
+  });
 
   await remoteLink.create({
     [SELLER_MODULE]: {
-      seller_id: seller.id
+      seller_id: seller.id,
     },
     [Modules.STOCK_LOCATION]: {
-      stock_location_id: result[0].id
-    }
-  })
+      stock_location_id: result[0].id,
+    },
+  });
 
-  const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
   await eventBus.emit({
     name: IntermediateEvents.STOCK_LOCATION_CHANGED,
-    data: { id: result[0].id }
-  })
+    data: { id: result[0].id },
+  });
 
   const {
-    data: [stockLocation]
+    data: [stockLocation],
   } = await query.graph({
-    entity: 'stock_location',
+    entity: "stock_location",
     fields: req.queryConfig.fields,
     filters: {
-      id: result[0].id
-    }
-  })
+      id: result[0].id,
+    },
+  });
 
   res.status(201).json({
-    stock_location: stockLocation
-  })
-}
+    stock_location: stockLocation,
+  });
+};
 
 /**
  * @oas [get] /vendor/stock-locations
@@ -111,7 +115,7 @@ export const POST = async (
  *               items:
  *                 $ref: "#/components/schemas/VendorStockLocation"
  * tags:
- *   - Stock Location
+ *   - Vendor Stock Locations
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -120,14 +124,19 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const { data: sellerLocations, metadata } = await query.graph({
     entity: sellerStockLocationLink.entryPoint,
     fields: req.queryConfig.fields.map((field) => `stock_location.${field}`),
-    filters: req.filterableFields,
-    pagination: req.queryConfig.pagination
-  })
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null,
+      },
+    },
+    pagination: req.queryConfig.pagination,
+  });
 
   res.status(200).json({
     stock_locations: sellerLocations.map(
@@ -135,6 +144,6 @@ export const GET = async (
     ),
     count: metadata?.count,
     offset: metadata?.skip,
-    limit: metadata?.take
-  })
-}
+    limit: metadata?.take,
+  });
+};

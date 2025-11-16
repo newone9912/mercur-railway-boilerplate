@@ -50,7 +50,7 @@ import { VendorCreatePriceListType } from './validators'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Price Lists
+ *   - Vendor Price Lists
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -64,7 +64,12 @@ export const GET = async (
   const { data: price_lists, metadata } = await query.graph({
     entity: sellerPriceList.entryPoint,
     fields: req.queryConfig.fields.map((v) => `price_list.${v}`),
-    filters: req.filterableFields,
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null
+      }
+    },
     pagination: req.queryConfig.pagination
   })
 
@@ -105,7 +110,7 @@ export const GET = async (
  *             price_list:
  *               $ref: "#/components/schemas/VendorPriceList"
  * tags:
- *   - Price Lists
+ *   - Vendor Price Lists
  * security:
  *   - api_token: []
  *   - cookie_auth: []

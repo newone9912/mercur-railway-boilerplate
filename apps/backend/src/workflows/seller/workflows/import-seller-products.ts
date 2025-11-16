@@ -1,40 +1,37 @@
 import {
   createProductsWorkflow,
-  createRemoteLinkStep,
-  parseProductCsvStep
-} from '@medusajs/medusa/core-flows'
+  emitEventStep,
+  parseProductCsvStep,
+} from "@medusajs/medusa/core-flows";
 import {
   WorkflowResponse,
   createWorkflow,
-  transform
-} from '@medusajs/workflows-sdk'
+  transform,
+} from "@medusajs/workflows-sdk";
 
-import { REQUESTS_MODULE } from '../../../modules/requests'
 import {
-  ProductRequestUpdatedEvent,
-  RequestStatus
-} from '../../../modules/requests/types'
-import { SELLER_MODULE } from '../../../modules/seller'
-import { emitMultipleEventsStep } from '../../common/steps'
-import { createRequestStep } from '../../requests/steps'
-import { validateProductsToImportStep } from '../steps'
+  ImportSellerProductsRequestUpdatedEvent,
+  RequestStatus,
+} from "@mercurjs/framework";
+
+import { validateProductsToImportStep } from "../steps";
 
 export const importSellerProductsWorkflow = createWorkflow(
-  'import-seller-products',
+  "import-seller-products",
   function (input: {
-    file_content: string
-    seller_id: string
-    submitter_id: string
+    file_content: string;
+    seller_id: string;
+    submitter_id: string;
   }) {
-    const products = parseProductCsvStep(input.file_content)
-    const batchCreate = validateProductsToImportStep(products)
+    const products = parseProductCsvStep(input.file_content);
+    const batchCreate = validateProductsToImportStep(products);
 
     const created = createProductsWorkflow.runAsStep({
       input: {
         products: batchCreate,
-        additional_data: { seller_id: input.seller_id }
-      }
-    })
+        additional_data: { seller_id: input.seller_id },
+      },
+    });
 
     const requestsPayload = transform(
       { created, input },
@@ -42,38 +39,29 @@ export const importSellerProductsWorkflow = createWorkflow(
         return created.map((p) => ({
           data: {
             ...p,
-            product_id: p.id
+            product_id: p.id,
           },
           submitter_id: input.submitter_id,
-          type: 'product',
-          status: 'pending' as RequestStatus
-        }))
+          type: "product",
+          status: "pending" as RequestStatus,
+        }));
       }
-    )
+    );
 
-    const requests = createRequestStep(requestsPayload)
+    const eventPayload = transform(
+      { requestsPayload, input },
+      ({ requestsPayload, input }) => ({
+        request_payloads: requestsPayload,
+        seller_id: input.seller_id,
+        submitter_id: input.submitter_id,
+      })
+    );
 
-    const link = transform({ requests, input }, ({ requests, input }) => {
-      return requests.map(({ id }) => ({
-        [SELLER_MODULE]: {
-          seller_id: input.seller_id
-        },
-        [REQUESTS_MODULE]: {
-          request_id: id
-        }
-      }))
-    })
+    emitEventStep({
+      eventName: ImportSellerProductsRequestUpdatedEvent.TO_CREATE,
+      data: eventPayload,
+    });
 
-    const events = transform(requests, (requests) => {
-      return requests.map(({ id }) => ({
-        name: ProductRequestUpdatedEvent.CREATED,
-        data: { id }
-      }))
-    })
-
-    createRemoteLinkStep(link)
-    emitMultipleEventsStep(events)
-
-    return new WorkflowResponse(created)
+    return new WorkflowResponse(created);
   }
-)
+);

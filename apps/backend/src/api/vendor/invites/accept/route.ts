@@ -1,8 +1,11 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
-import { acceptMemberInvitesWorkflow } from '../../../../workflows/member/workflows/accept-member-invite'
-import { VendorAcceptMemberInviteType } from '../validators'
+import { acceptMemberInvitesWorkflow } from "../../../../workflows/seller/workflows";
+import { VendorAcceptMemberInviteType } from "../validators";
 
 /**
  * @oas [post] /vendor/invites/{id}/accept
@@ -33,7 +36,7 @@ import { VendorAcceptMemberInviteType } from '../validators'
  *             invite:
  *               $ref: "#/components/schemas/VendorMemberInvite"
  * tags:
- *   - Member
+ *   - Vendor Invites
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -42,26 +45,25 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorAcceptMemberInviteType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const { id } = req.params
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
-  await acceptMemberInvitesWorkflow(req.scope).run({
+  const { result } = await acceptMemberInvitesWorkflow(req.scope).run({
     input: {
       invite: req.validatedBody,
-      authIdentityId: req.auth_context.auth_identity_id
-    }
-  })
+      authIdentityId: req.auth_context.auth_identity_id,
+    },
+  });
 
   const {
-    data: [invite]
+    data: [invite],
   } = await query.graph(
     {
-      entity: 'member_invite',
+      entity: "member_invite",
       fields: req.queryConfig.fields,
-      filters: { id }
+      filters: { id: result.id },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.json({ invite })
-}
+  res.json({ invite });
+};

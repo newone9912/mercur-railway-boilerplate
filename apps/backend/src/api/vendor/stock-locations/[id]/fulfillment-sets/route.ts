@@ -1,13 +1,14 @@
 import {
   AuthenticatedMedusaRequest,
-  MedusaResponse
-} from '@medusajs/framework/http'
-import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
+  MedusaResponse,
+} from "@medusajs/framework/http";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 
-import { IntermediateEvents } from '../../../../../modules/algolia/types'
-import { fetchSellerByAuthActorId } from '../../../../../shared/infra/http/utils'
-import { createLocationFulfillmentSetAndAssociateWithSellerWorkflow } from '../../../../../workflows/fulfillment-set/workflows'
-import { VendorCreateStockLocationFulfillmentSetType } from '../../validators'
+import { IntermediateEvents } from "@mercurjs/framework";
+
+import { fetchSellerByAuthActorId } from "../../../../../shared/infra/http/utils";
+import { createLocationFulfillmentSetAndAssociateWithSellerWorkflow } from "../../../../../workflows/fulfillment-set";
+import { VendorCreateStockLocationFulfillmentSetType } from "../../validators";
 
 /**
  * @oas [post] /vendor/stock-locations/{id}/fulfillment-sets
@@ -43,7 +44,7 @@ import { VendorCreateStockLocationFulfillmentSetType } from '../../validators'
  *             stock_location:
  *               $ref: "#/components/schemas/VendorStockLocation"
  * tags:
- *   - Stock Location
+ *   - Vendor Stock Locations
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -52,12 +53,12 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorCreateStockLocationFulfillmentSetType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   await createLocationFulfillmentSetAndAssociateWithSellerWorkflow(
     req.scope
@@ -66,30 +67,30 @@ export const POST = async (
       location_id: req.params.id,
       fulfillment_set_data: {
         name: req.validatedBody.name,
-        type: req.validatedBody.type
+        type: req.validatedBody.type,
       },
-      seller_id: seller.id
-    }
-  })
+      seller_id: seller.id,
+    },
+  });
 
-  const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
   await eventBus.emit({
     name: IntermediateEvents.STOCK_LOCATION_CHANGED,
-    data: { id: req.params.id }
-  })
+    data: { id: req.params.id },
+  });
 
   const {
-    data: [stockLocation]
+    data: [stockLocation],
   } = await query.graph(
     {
-      entity: 'stock_location',
+      entity: "stock_location",
       fields: req.queryConfig.fields,
       filters: {
-        id: req.params.id
-      }
+        id: req.params.id,
+      },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.status(200).json({ stock_location: stockLocation })
-}
+  res.status(200).json({ stock_location: stockLocation });
+};

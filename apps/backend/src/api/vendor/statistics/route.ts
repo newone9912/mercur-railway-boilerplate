@@ -1,10 +1,14 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
 
 import {
   selectCustomersChartData,
-  selectOrdersChartData
-} from '../../../modules/seller/utils'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
+  selectOrdersChartData,
+} from "../../../modules/seller";
+
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
 
 /**
  * @oas [get] /vendor/statistics
@@ -38,7 +42,7 @@ import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
  *               items:
  *                 $ref: "#/components/schemas/VendorDateStatistics"
  * tags:
- *   - Seller
+ *   - Vendor Statistics
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -50,16 +54,16 @@ export const GET = async (
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   const orders = await selectOrdersChartData(req.scope, seller.id, [
     (req.validatedQuery.time_from as Date).toISOString(),
-    (req.validatedQuery.time_to as Date).toISOString()
-  ])
+    (req.validatedQuery.time_to as Date).toISOString(),
+  ]);
   const customers = await selectCustomersChartData(req.scope, seller.id, [
     (req.validatedQuery.time_from as Date).toISOString(),
-    (req.validatedQuery.time_to as Date).toISOString()
-  ])
+    (req.validatedQuery.time_to as Date).toISOString(),
+  ]);
 
-  res.json({ orders, customers })
-}
+  res.json({ orders, customers });
+};

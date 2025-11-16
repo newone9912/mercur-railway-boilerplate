@@ -1,5 +1,10 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
 import {
+  ApplicationMethodTypeValues,
+  PromotionTypeValues,
+  RuleTypeValues
+} from '@medusajs/framework/types'
+import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString
 } from '@medusajs/framework/utils'
@@ -56,7 +61,7 @@ import { fetchSellerByAuthActorId } from '../../../../../../shared/infra/http/ut
  *   - cookie_auth: []
  *   - jwt_token: []
  * tags:
- *   - Promotions
+ *   - Vendor Promotions
  * responses:
  *   "200":
  *     description: OK
@@ -96,10 +101,10 @@ export const GET = async (
 
   validateRuleType(ruleType)
   validateRuleAttribute({
-    promotionType,
-    ruleType,
+    promotionType: promotionType as PromotionTypeValues,
+    ruleType: ruleType as RuleTypeValues,
     ruleAttributeId,
-    applicationMethodType
+    applicationMethodType: applicationMethodType as ApplicationMethodTypeValues
   })
 
   const seller = await fetchSellerByAuthActorId(
@@ -113,7 +118,8 @@ export const GET = async (
       fields: ['product_id'],
       filters: {
         seller_id: seller.id
-      }
+      },
+      withDeleted: true
     })
 
     filterableFields['id'] = products.map((p) => p.product_id)
@@ -125,7 +131,8 @@ export const GET = async (
       fields: ['customer_group_id'],
       filters: {
         seller_id: seller.id
-      }
+      },
+      withDeleted: true
     })
 
     filterableFields['id'] = groups.map((p) => p.customer_group_id)

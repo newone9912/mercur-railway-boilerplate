@@ -3,6 +3,9 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse
 } from '@medusajs/framework/http'
+import { Modules } from '@medusajs/framework/utils'
+
+import { IntermediateEvents } from '@mercurjs/framework'
 
 import { fetchSellerByAuthActorId } from '../../../../../../shared/infra/http/utils'
 import {
@@ -33,7 +36,7 @@ import { VendorBatchInventoryItemLocationsLevelType } from '../../../validators'
  *   "200":
  *     description: Ok
  * tags:
- *   - Product
+ *   - Vendor Inventory Items
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -74,6 +77,12 @@ export const POST = async (
   const output = await batchInventoryItemLevelsWorkflow.run({
     container: req.scope,
     ...batchInput
+  })
+
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+  await eventBus.emit({
+    name: IntermediateEvents.INVENTORY_ITEM_CHANGED,
+    data: { id }
   })
 
   res.status(200).json({

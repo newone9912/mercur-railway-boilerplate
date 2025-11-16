@@ -1,14 +1,21 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
 import {
   ContainerRegistrationKeys,
-  MedusaError
-} from '@medusajs/framework/utils'
+  MedusaError,
+  Modules,
+} from "@medusajs/framework/utils";
 import {
   deleteProductOptionsWorkflow,
-  updateProductOptionsWorkflow
-} from '@medusajs/medusa/core-flows'
+  updateProductOptionsWorkflow,
+} from "@medusajs/medusa/core-flows";
 
-import { UpdateProductOptionType } from '../../../validators'
+import { fetchSellerByAuthActorId } from "../../../../../../shared/infra/http/utils";
+import { fetchProductDetails } from "../../../../../../shared/infra/http/utils/products";
+import { UpdateProductOptionType } from "../../../validators";
+import { ProductUpdateRequestUpdatedEvent } from "@mercurjs/framework";
 
 /**
  * @oas [delete] /vendor/products/{id}/options/{option_id}
@@ -47,7 +54,7 @@ import { UpdateProductOptionType } from '../../../validators'
  *               type: boolean
  *               description: Whether or not the items were deleted
  * tags:
- *   - Product
+ *   - Vendor Products
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -56,39 +63,39 @@ export const DELETE = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const productId = req.params.id
-  const optionId = req.params.option_id
+  const productId = req.params.id;
+  const optionId = req.params.option_id;
 
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const {
-    data: [option]
+    data: [option],
   } = await query.graph({
-    entity: 'product_option',
-    fields: ['product_id'],
+    entity: "product_option",
+    fields: ["product_id"],
     filters: {
-      id: optionId
-    }
-  })
+      id: optionId,
+    },
+  });
 
   if (productId !== option.product_id) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
-      'Invalid product option id!'
-    )
+      "Invalid product option id!"
+    );
   }
 
   await deleteProductOptionsWorkflow.run({
     container: req.scope,
-    input: { ids: [optionId] }
-  })
+    input: { ids: [optionId] },
+  });
 
   res.json({
     id: optionId,
-    object: 'option',
-    deleted: true
-  })
-}
+    object: "option",
+    deleted: true,
+  });
+};
 
 /**
  * @oas [post] /vendor/products/{id}/options/{option_id}
@@ -131,7 +138,7 @@ export const DELETE = async (
  *             product:
  *               $ref: "#/components/schemas/VendorProduct"
  * tags:
- *   - Product
+ *   - Vendor Products
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -140,28 +147,48 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<UpdateProductOptionType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const productId = req.params.id
-  const optionId = req.params.option_id
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const productId = req.params.id;
+  const optionId = req.params.option_id;
 
   await updateProductOptionsWorkflow.run({
     container: req.scope,
     input: {
       selector: { id: optionId, product_id: productId },
-      update: req.validatedBody
-    }
-  })
+      update: req.validatedBody,
+    },
+  });
+
+  const productDetails = await fetchProductDetails(req.params.id, req.scope);
+  if (!["draft", "proposed"].includes(productDetails.status)) {
+    const seller = await fetchSellerByAuthActorId(
+      req.auth_context.actor_id,
+      req.scope
+    );
+    const eventBus = req.scope.resolve(Modules.EVENT_BUS);
+    await eventBus.emit({
+      name: ProductUpdateRequestUpdatedEvent.TO_CREATE,
+      data: {
+        data: {
+          data: { product_id: req.params.id, title: productDetails.title },
+          submitter_id: req.auth_context.actor_id,
+          type: "product_update",
+        },
+        seller_id: seller.id,
+      },
+    });
+  }
 
   const {
-    data: [product]
+    data: [product],
   } = await query.graph(
     {
-      entity: 'product',
+      entity: "product",
       fields: req.queryConfig.fields,
-      filters: { id: productId }
+      filters: { id: productId },
     },
     { throwIfKeyNotFound: true }
-  )
+  );
 
-  res.json({ product })
-}
+  res.json({ product });
+};

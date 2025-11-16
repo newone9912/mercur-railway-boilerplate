@@ -1,8 +1,12 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { getOrdersListWorkflow } from '@medusajs/medusa/core-flows'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { getOrdersListWorkflow } from "@medusajs/medusa/core-flows";
 
-import { selectCustomerOrders } from '../../../../../modules/seller/utils'
-import { fetchSellerByAuthActorId } from '../../../../../shared/infra/http/utils'
+import { selectCustomerOrders } from "../../../../../modules/seller";
+
+import { fetchSellerByAuthActorId } from "../../../../../shared/infra/http/utils";
 
 /**
  * @oas [get] /vendor/customers/{id}/orders
@@ -57,7 +61,7 @@ import { fetchSellerByAuthActorId } from '../../../../../shared/infra/http/utils
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Order
+ *   - Vendor Customers
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -69,7 +73,7 @@ export const GET = async (
   const seller = await fetchSellerByAuthActorId(
     req.auth_context.actor_id,
     req.scope
-  )
+  );
 
   const { orders: orderIds, count } = await selectCustomerOrders(
     req.scope,
@@ -77,10 +81,10 @@ export const GET = async (
     req.params.id,
     {
       skip: req.queryConfig.pagination.skip,
-      take: req.queryConfig.pagination.take || 50
+      take: req.queryConfig.pagination.take || 50,
     },
-    ['id']
-  )
+    ["id"]
+  );
 
   const { result: orders } = await getOrdersListWorkflow.run({
     container: req.scope,
@@ -88,16 +92,16 @@ export const GET = async (
       fields: req.queryConfig.fields,
       variables: {
         filters: {
-          id: orderIds.map((o) => o.id)
-        }
-      }
-    }
-  })
+          id: orderIds.map((o) => o.id),
+        },
+      },
+    },
+  });
 
   res.json({
     orders,
     count,
     offset: req.queryConfig.pagination.skip,
-    limit: req.queryConfig.pagination.take
-  })
-}
+    limit: req.queryConfig.pagination.take,
+  });
+};

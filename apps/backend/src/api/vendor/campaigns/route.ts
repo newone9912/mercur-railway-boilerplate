@@ -1,10 +1,13 @@
-import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
-import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
+import {
+  AuthenticatedMedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
-import sellerCampaign from '../../../links/seller-campaign'
-import { fetchSellerByAuthActorId } from '../../../shared/infra/http/utils'
-import { createVendorCampaignWorkflow } from '../../../workflows/campaigns/workflows'
-import { VendorCreateCampaignType } from './validators'
+import sellerCampaign from "../../../links/seller-campaign";
+import { fetchSellerByAuthActorId } from "../../../shared/infra/http/utils";
+import { createVendorCampaignWorkflow } from "../../../workflows/campaigns/workflows";
+import { VendorCreateCampaignType } from "./validators";
 
 /**
  * @oas [get] /vendor/campaigns
@@ -53,7 +56,7 @@ import { VendorCreateCampaignType } from './validators'
  *               type: integer
  *               description: The number of items per page
  * tags:
- *   - Promotion
+ *   - Vendor Campaigns
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -62,22 +65,31 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
-  const { data: campaigns, metadata } = await query.graph({
+  const { data: relations, metadata } = await query.graph({
     entity: sellerCampaign.entryPoint,
     fields: req.queryConfig.fields.map((field) => `campaign.${field}`),
-    filters: req.filterableFields,
-    pagination: req.queryConfig.pagination
-  })
+    filters: {
+      ...req.filterableFields,
+      deleted_at: {
+        $eq: null,
+      },
+    },
+    pagination: req.queryConfig.pagination,
+  });
+
+  const activeCampaigns = relations
+    .map((relation) => relation.campaign)
+    .filter((campaign) => !!campaign);
 
   res.json({
-    campaigns: campaigns.map((relation) => relation.campaign),
-    count: metadata?.count,
+    campaigns: activeCampaigns,
+    count: activeCampaigns.length,
     offset: metadata?.skip,
-    limit: metadata?.take
-  })
-}
+    limit: metadata?.take,
+  });
+};
 
 /**
  * @oas [post] /vendor/campaigns
@@ -108,7 +120,7 @@ export const GET = async (
  *             campaign:
  *               $ref: "#/components/schemas/VendorCampaign"
  * tags:
- *   - Promotion
+ *   - Vendor Campaigns
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -117,26 +129,26 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<VendorCreateCampaignType>,
   res: MedusaResponse
 ) => {
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
   const seller = await fetchSellerByAuthActorId(
     req.auth_context?.actor_id,
     req.scope
-  )
+  );
 
   const { result } = await createVendorCampaignWorkflow.run({
     container: req.scope,
-    input: { campaign: req.validatedBody, seller_id: seller.id }
-  })
+    input: { campaign: req.validatedBody, seller_id: seller.id },
+  });
 
   const {
-    data: [campaign]
+    data: [campaign],
   } = await query.graph({
-    entity: 'campaign',
+    entity: "campaign",
     fields: req.queryConfig.fields,
     filters: {
-      id: result[0].id
-    }
-  })
+      id: result[0].id,
+    },
+  });
 
-  res.status(201).json({ campaign })
-}
+  res.status(201).json({ campaign });
+};

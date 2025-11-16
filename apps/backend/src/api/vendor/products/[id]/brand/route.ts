@@ -2,7 +2,7 @@ import { AuthenticatedMedusaRequest, MedusaResponse } from '@medusajs/framework'
 import { ContainerRegistrationKeys } from '@medusajs/framework/utils'
 
 import { assignBrandToProductWorkflow } from '../../../../../workflows/brand/workflows'
-import { VendorAssignBrandNameType } from '../../validators'
+import { VendorAssignBrandNameType } from '../../../../admin/products/validators'
 
 /**
  * @oas [post] /vendor/products/{id}/brand

@@ -17,7 +17,6 @@ import {
 } from '@medusajs/medusa/core-flows'
 
 import sellerShippingProfile from '../../links/seller-shipping-profile'
-import { ConfigurationRuleDefaults } from '../../modules/configuration/service'
 import ConfigurationModuleService from '../../modules/configuration/service'
 import { SELLER_MODULE } from '../../modules/seller'
 import { createCommissionRuleWorkflow } from '../../workflows/commission/workflows'
